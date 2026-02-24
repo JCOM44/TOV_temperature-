@@ -1,0 +1,424 @@
+## 
+## TOV star with temperature
+##
+
+###########################################################
+############### Active Thorns #############################
+###########################################################
+
+ActiveThorns = "Time MoL Dissipation"                                                           # Required for method of lines evolution eqs
+ActiveThorns = "Coordbase CartGrid3d Boundary StaticConformal CoordGauge"                       # Grid, coords, boundaries and symmetries
+ActiveThorns = "SymBase ADMBase TmunuBase HydroBase InitBase ADMCoupling ADMMacros Constants"   # Inital base variable definition and infrastructure
+ActiveThorns = "Formaline SystemTopology LoopControl"                                           # metadata of the runs, thread layout
+ActiveThorns = "Slab SpaceMask LocalReduce aeilocalinterp"                                      # arrays, processor reduce and masks
+ActiveThorns = "Carpet CarpetLib CarpetReduce CarpetRegrid2 CarpetInterp CarpetEvolutionMask"   # Carpet grid
+ActiveThorns = "CarpetIOASCII CarpetIOScalar CarpetIOHDF5 CarpetIOBasic IOUtil"                 # Carpet IO
+ActiveThorns = " "                                                                              # Here you add the metric evolution thorns
+ActiveThorns = "NaNChecker TerminationTrigger"                                                  # Quality control
+ActiveThorns = "NPScalars SphericalSurface WeylScal4 Multipole QuasiLocalMeasures"                      # GW extraction 
+ActiveThorns = "GRHayLHD"
+ActiveThorns = "Hydro_Analysis ADMMass"
+ActiveThorns = "Convert_to_HydroBase GRHayLib"
+
+
+###########################################################
+#####################   grid parameters   #################
+###########################################################
+
+CartGrid3D::type         = "coordbase"
+CoordBase::xmin = -320.0
+CoordBase::ymin = -320.0                
+CoordBase::zmin = -320.0                
+CoordBase::xmax = 320.0                 
+CoordBase::ymax = 320.0
+CoordBase::zmax = 320.0
+CoordBase::dx   =   5.12                
+CoordBase::dy   =   5.12                
+CoordBase::dz   =   5.12                
+
+CoordBase::boundary_size_x_lower        = 3
+CoordBase::boundary_size_y_lower        = 3
+CoordBase::boundary_size_z_lower        = 3
+CoordBase::boundary_size_x_upper        = 3
+CoordBase::boundary_size_y_upper        = 3
+CoordBase::boundary_size_z_upper        = 3
+
+
+###########################################################
+#################   Symmetries & Base   ###################
+###########################################################
+
+TmunuBase::stress_energy_storage = yes
+TmunuBase::stress_energy_at_RHS  = yes
+TmunuBase::timelevels            =  1
+TmunuBase::prolongation_type     = none
+
+HydroBase::timelevels    = 3    
+
+ADMMacros::spatial_order = 4    
+
+ADMBase::metric_type     = "physical"
+ADMBase::lapse_timelevels = 3   
+ADMBase::shift_timelevels = 3   
+ADMBase::metric_timelevels = 3  
+
+
+###########################################################
+#####################   Carpet & Cactus   #################
+###########################################################
+
+SpaceMask::use_mask      = "yes"
+Cactus::terminate        = "time" 
+Cactus::cctk_final_time  = 5000 
+
+Carpet::domain_from_coordbase = "yes"
+Carpet::enable_all_storage       = no
+Carpet::use_buffer_zones         = "yes"
+Carpet::schedule_barriers = "no"
+
+Carpet::poison_new_timelevels    = "yes"
+Carpet::check_for_poison         = "no"
+
+Carpet::init_3_timelevels        = no
+Carpet::init_fill_timelevels     = "yes"
+
+CarpetLib::poison_new_memory = "yes"
+CarpetLib::poison_value      = 114
+
+driver::ghost_size               = 3
+Carpet::prolongation_order_space = 5
+Carpet::prolongation_order_time  = 2
+
+###########################################################
+############# Refinement and Compression   ################
+###########################################################
+
+Carpet::max_refinement_levels    = 10
+
+CarpetRegrid2::freeze_unaligned_levels = "yes"
+CarpetRegrid2::freeze_unaligned_parent_levels = "yes"
+CarpetRegrid2::ensure_proper_nesting = "yes"
+CarpetRegrid2::snap_to_coarse = "yes"
+CarpetRegrid2::symmetry_rotating180 = "yes"
+
+CarpetIOHDF5::compression_level = 4
+
+CarpetRegrid2::regrid_every = 0
+CarpetRegrid2::num_centres  = 1
+
+CarpetRegrid2::num_levels_1 = 5
+
+CarpetRegrid2::radius_1[0]  = 320.0  #2.56
+CarpetRegrid2::radius_1[1]  = 128.0  #1.28
+CarpetRegrid2::radius_1[2]  = 32.0   #0.64
+CarpetRegrid2::radius_1[3]  = 20.0   #0.32
+CarpetRegrid2::radius_1[4]  = 14.0   #0.16          #initial level
+
+
+###########################################################
+#####################   Method of lines   #################
+###########################################################
+
+
+
+time::dtfac = 0.25              #CFL condition, indicates timestep as DT=dtfac*dx
+MoL::ODE_Method             = "rk4"
+MoL::MoL_Intermediate_Steps = 4
+MoL::MoL_Num_Scratch_Levels = 1
+
+
+###########################################################
+#####################   Debug tools   #####################
+###########################################################
+
+# check all physical variables for NaNs
+NaNChecker::check_every = 128
+NaNChecker::action_if_found = "terminate"#, "just warn", "abort"
+NaNChecker::check_vars = "
+            ADMBase::curv
+            ADMBase::metric
+            ADMBase::lapse
+            ADMBase::shift
+            HydroBase::rho
+            HydroBase::eps
+            HydroBase::press
+            HydroBase::vel
+"
+
+## Lapse Condition:  \partial_t alpha = - alpha K
+## Shift Condition:  \partial_t beta^i = 0
+
+
+
+###########################################################
+#####################   Hydro  ############################
+###########################################################
+
+# Hydro paramters
+
+
+GRHayLHD::verbose="no"
+GRHayLHD::Convert_to_HydroBase_every = 256
+
+GRHayLib::Psi6threshold = 1e100
+GRHayLib::Lorenz_damping_factor = 0.1
+GRHayLib::con2prim_routine = "Palenzuela1D"
+GRHayLib::con2prim_backup_routines[0] = "Newman1D"
+GRhayLib::con2prim_backup_routines[1] = "Palenzuela1D_entropy"
+GRhayLib::con2prim_backup_routines[2] = "Newman1D_entropy"
+
+##### EOS #####
+GRHayLib::EOS_type = "Tabulated"
+GRHayLib::rho_b_atm = 1.0e-14
+GRHayLib::rho_b_min = GRHayLib::rho_b_atm
+GRHayLib::rho_b_max = 2.678197821964194e-2
+
+########################################
+# Tabulated
+########################################
+GRHayLib::EOS_tablepath = "HOME/EOS/Hempel_DD2EOS_rho234_temp180_ye60_version_1.1_20120817.h5"
+GRHayLib::Y_e_atm       = 0.46187
+GRHayLib::Y_e_min       = 0.01
+GRHayLib::Y_e_max       = 0.6
+GRHayLib::T_atm         = 0.01
+GRHayLib::T_min         = 0.01
+GRHayLib::T_max         = 158.48
+
+GRHayLib::evolve_temperature = yes
+GRHayLib::evolve_entropy     = yes
+
+###########################################################
+#####################   Metric evolution   ################
+###########################################################
+
+ActiveThorns = "GenericFD NewRad"
+
+# Here add your favorite spacetime evolution thorn 
+ADMBase::evolution_method        = "     "
+ADMBase::lapse_evolution_method  = "     "
+ADMBase::shift_evolution_method  = "     "
+ADMBase::dtlapse_evolution_method= "     "
+ADMBase::dtshift_evolution_method= "     "
+
+#metric evolution stuff goes here
+
+
+
+##########################################################
+#####################   initial data   ####################
+###########################################################
+
+# init data, change Hydro_RNSID for TOVola
+
+InitBase::initial_data_setup_method = "init_some_levels"
+
+ActiveThorns = " TOVola       GRHayLID"
+
+GRHayLID::initialize_magnetic_quantities = "no"
+GRHayLID::impose_beta_equilibrium = "yes"
+GRHayLID::beq_temperature = 0.01
+
+HydroBase::initial_hydro       = "        "
+HydroBase::initial_Y_e         = "GRHayLID"
+HydroBase::initial_temperature = "GRHayLID"
+HydroBase::initial_entropy     = "GRHayLID"
+
+ADMBase::initial_data           = "hydro_rnsid"
+ADMBase::initial_lapse          = "hydro_rnsid"
+ADMBase::initial_shift          = "hydro_rnsid"
+ADMBase::initial_dtlapse        = "zero"
+ADMBase::initial_dtshift        = "zero"
+
+#TOVola stuff goes here
+
+
+###########################################################
+################ Spatial finite differencing  #############
+###########################################################
+
+Dissipation::epsdis = 0.015
+Dissipation::order  = 5
+Dissipation::vars   = "
+  ADMBase::lapse
+  ADMBase::shift
+
+"
+
+###########################################################
+################# Wave extraction  ########################
+###########################################################
+
+
+WeylScal4::offset       = 1e-8
+WeylScal4::fd_order     = "4th"
+WeylScal4::verbose      = 0
+
+NPScalars::NP_order     = 4
+
+Multipole::nradii       = 9
+Multipole::out_every    = 128
+Multipole::radius[0]    = 0.0
+Multipole::radius[1]    = 1.0
+Multipole::radius[2]    = 2.5
+Multipole::radius[3]    = 4.0
+Multipole::radius[4]    = 5.0
+Multipole::radius[5]    = 7.0
+Multipole::radius[6]    = 8.0
+Multipole::radius[7]    = 9.0
+
+Multipole::ntheta       = 120
+Multipole::nphi         = 240
+
+Multipole::integration_method = "Simpson"
+Multipole::variables    = "
+        HydroBase::rho{sw=0 name='rho'}
+"
+Multipole::l_max        = 4
+
+############################
+######### Hydro analysis 
+############################
+
+Hydro_Analysis::restmass_compute_masses  = "yes"
+Hydro_Analysis::restmass_rho_min         = 1.e-14
+Hydro_Analysis::restmass_masses_nr       = 5
+Hydro_analysis::restmass_ref_radius_mass[0] = 12
+Hydro_analysis::restmass_ref_radius_mass[1] = 8
+Hydro_analysis::restmass_ref_radius_mass[2] = 4
+Hydro_analysis::restmass_ref_radius_mass[3] = 3
+Hydro_analysis::restmass_ref_radius_mass[4] = 2
+
+
+admmass::admmass_surface_distance[0]     = 200
+admmass::admmass_use_all_volume_as_volume_radius = no
+admmass::admmass_use_surface_distance_as_volume_radius = no
+admmass::admmass_volume_radius[0]        = 240
+
+ActiveThorns = "VolumeIntegrals_GRMHD"
+
+VolumeIntegrals_GRMHD::NumIntegrals = 2
+VolumeIntegrals_GRMHD::VolIntegral_out_every = 2
+VolumeIntegrals_GRMHD::enable_file_output = 1
+VolumeIntegrals_GRMHD::outVolIntegral_dir = "output_directory/volume_integrals"
+VolumeIntegrals_GRMHD::verbose = 0
+# The AMR centre will only track the first referenced integration quantities that track said centre.
+#   Thus, centeroflapse output will not feed back into the AMR centre positions.
+VolumeIntegrals_GRMHD::Integration_quantity_keyword[1] = "restmass"
+VolumeIntegrals_GRMHD::Integration_quantity_keyword[2] = "restmass"
+
+VolumeIntegrals_GRMHD::volintegral_sphere__center_x_initial         [1] =  0.0
+VolumeIntegrals_GRMHD::volintegral_inside_sphere__radius            [1] =  10.0
+VolumeIntegrals_GRMHD::volintegral_sphere__center_x_initial         [2] =  0.0
+VolumeIntegrals_GRMHD::volintegral_inside_sphere__radius            [2] =  5.0
+
+
+ActiveThorns = "VolumeIntegrals_vacuum"
+VolumeIntegrals_vacuum::NumIntegrals = 8
+VolumeIntegrals_vacuum::VolIntegral_out_every = 2
+VolumeIntegrals_vacuum::enable_file_output = 1
+VolumeIntegrals_vacuum::outVolIntegral_dir = "output_directory/volume_integrals"
+VolumeIntegrals_vacuum::verbose = 0
+
+# Here write the name of your constraints, if in doubt, check your metric evol thorn interface.ccl 
+VolumeIntegrals_vacuum::HamiltonianVarString = "          "
+VolumeIntegrals_vacuum::Momentum0VarString   = "          "
+VolumeIntegrals_vacuum::Momentum1VarString   = "          "
+VolumeIntegrals_vacuum::Momentum2VarString   = "          "
+
+VolumeIntegrals_vacuum::Integration_quantity_keyword[1] = "H_M_CnstraintsL2"
+VolumeIntegrals_vacuum::Integration_quantity_keyword[2] = "ADM_Mass"
+VolumeIntegrals_vacuum::Integration_quantity_keyword[3] = "ADM_Momentum"
+VolumeIntegrals_vacuum::Integration_quantity_keyword[4] = "ADM_Angular_Momentum"
+
+VolumeIntegrals_vacuum::volintegral_outside_sphere__radius[1] = 0
+VolumeIntegrals_vacuum::volintegral_outside_sphere__radius[2] = 0
+VolumeIntegrals_vacuum::volintegral_outside_sphere__radius[3] = 0
+VolumeIntegrals_vacuum::volintegral_outside_sphere__radius[4] = 0
+
+###########################################################
+#####################   I/O   #############################
+###########################################################
+
+
+
+
+
+IOBasic::outInfo_every              = 1
+IOBasic::outInfo_vars               = "HydroBase::rho HydroBase::eps HydroBase::press  ADMBase::lapse{reductions='minimum'}    "
+
+#IO::out_dir      = $parfile    
+
+IOScalar::outScalar_every = 256
+IOScalar::one_file_per_group = yes
+IOScalar::outScalar_reductions = "minimum maximum norm2"
+IOScalar::outScalar_vars  = "
+ HydroBase::rho
+ HydroBase::eps
+ HydroBase::vel
+ ADMBase::lapse
+ ADMBase::metric
+# add here your hamiltonian constrain maybe
+"
+
+IOASCII::out0D_every = 256
+IOASCII::out0D_vars = "
+  Hydro_Analysis::Hydro_Analysis_masses
+  ADMMass::admmass_masses
+"
+
+
+IOASCII::out1D_every     = 256
+IOASCII::one_file_per_group = yes
+IOASCII::output_symmetry_points = no
+IOASCII::out3D_ghosts           = no
+IOASCII::out3D_outer_ghosts     = no
+IOASCII::out1D_vars      = "
+ HydroBase::rho
+ HydroBase::press
+ HydroBase::eps
+ HydroBase::vel
+ HydroBase::entropy
+ HydroBase::temperature
+ HydroBase::Y_e
+ HydroBase::w_lorentz
+ ADMBase::lapse
+ ADMBase::gxx
+ ADMBase::gxy
+ ADMBase::gxz
+ ADMBase::gyy
+ ADMBase::gyz
+ ADMBase::gzz
+ ADMBase::betax
+ ADMBase::betay
+ ADMBase::betaz
+ ADMBase::curv
+# whatever metric quantities you want from your evolution thorn
+"
+IOHDF5::out2D_every            = 2048
+IOHDF5::out2D_vars             = "
+        ADMBase::lapse
+        ADMBase::shift
+        HydroBase::rho
+        HydroBase::press
+        HydroBase::entropy
+        HydroBase::temperature
+        HydroBase::Y_e
+        HydroBase::w_lorentz
+        HydroBase::vel
+# whatever metric quantities you want from your evolution thorn
+"
+
+
+
+# # for 3D HDF5 output
+ IOHDF5::out_every              = 4096
+ IOHDF5::one_file_per_group     = yes
+ IOHDF5::output_symmetry_points = no
+ IOHDF5::out3D_ghosts           = no
+ IOHDF5::compression_level      = 3
+ IOHDF5::use_checksums          = yes
+ IOHDF5::out_vars               = "
+         HydroBase::rho
+# whatever metric quantities you want from your evolution thorn
+"
+
