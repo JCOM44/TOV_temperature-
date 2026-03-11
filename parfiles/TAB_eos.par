@@ -212,13 +212,14 @@ ADMBase::dtshift_evolution_method= "     "
 
 InitBase::initial_data_setup_method = "init_some_levels"
 
-ActiveThorns = " TOVola       GRHayLID"
+#ActiveThorns = " TOVola       GRHayLID"
+ActiveThorns = "Hydro_RNSID GRHayLID"
 
 GRHayLID::initialize_magnetic_quantities = "no"
 GRHayLID::impose_beta_equilibrium = "yes"
 GRHayLID::beq_temperature = 0.01
 
-HydroBase::initial_hydro       = "        "
+HydroBase::initial_hydro 	= "hydro_rnsid"
 HydroBase::initial_Y_e         = "GRHayLID"
 HydroBase::initial_temperature = "GRHayLID"
 HydroBase::initial_entropy     = "GRHayLID"
@@ -229,7 +230,18 @@ ADMBase::initial_shift          = "hydro_rnsid"
 ADMBase::initial_dtlapse        = "zero"
 ADMBase::initial_dtshift        = "zero"
 
-#TOVola stuff goes here
+Hydro_rnsid::rotation_type 	= "uniform"
+Hydro_rnsid::axes_ratio 	= 1.0
+
+Hydro_rnsid::rho_central	= 1.5e-3  #1.28e-3 #1.7082e-3
+Hydro_rnsid::eos_type 		= "tab"
+Hydro_rnsid::accuracy           = 1e-11
+Hydro_rnsid::save_2Dmodel 	= "no"
+Hydro_rnsid::recover_2Dmodel	= "no"
+#Hydro_rnsid::eos_file	        = "/EOS/SFH0_beta_eq_T-0.01MeV.dat"
+Hydro_rnsid::eos_file	        = "/EOS/DD2_beta_eq_T-0.01MeV.dat"
+#Hydro_rnsid::model2D_file	= "/ID_files/hydro_GR_ax-0.676953_SFH0_beta_eq_T-0.01MeV.h5" 
+#Hydro_rnsid::model2D_file	= "/ID_files/hydro_GR_DD2_beta_eq_T-0.01MeV.h5" 
 
 
 ###########################################################
